@@ -173,6 +173,7 @@
 
         let db, auth, userId;
         let isAuthReady = false;
+        let isFirebaseActive = false; // New flag to track if initialization succeeded
 
         const events = [
             {
@@ -253,11 +254,6 @@
         document.getElementById('booking-form').addEventListener('submit', async function(event) {
             event.preventDefault(); // Prevent the default form submission
 
-            if (!isAuthReady || !db) {
-                console.error("Auth or database not ready. Please try again in a moment.");
-                return;
-            }
-
             const firstName = document.getElementById('firstName').value;
             const lastName = document.getElementById('lastName').value;
             const email = document.getElementById('email').value;
@@ -268,27 +264,32 @@
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
-            try {
-                // Save the data to Firestore
-                await addDoc(collection(db, `/artifacts/${appId}/public/data/bookings`), {
-                    firstName,
-                    lastName,
-                    email,
-                    event: 'Halloween Party',
-                    timestamp: new Date()
-                });
-
-                // Hide the form and show the success message
-                document.getElementById('booking-form-container').classList.add('hidden');
-                document.getElementById('booking-success').classList.remove('hidden');
-
-                // Open the WhatsApp URL in a new tab
-                window.open(whatsappUrl, '_blank');
-
-            } catch (e) {
-                console.error("Error adding document: ", e);
-                // You could show a message to the user here that the booking failed
+            // --- Firebase Save Logic ---
+            // Only attempt to save to Firestore if the Firebase services were successfully initialized.
+            if (isFirebaseActive && isAuthReady && db) {
+                try {
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/bookings`), {
+                        firstName,
+                        lastName,
+                        email,
+                        event: 'Halloween Party',
+                        timestamp: new Date()
+                    });
+                    console.log("Booking successfully saved to Firestore.");
+                } catch (e) {
+                    console.error("Error adding document to Firestore (expected failure outside Canvas without config): ", e);
+                }
+            } else {
+                console.warn("Skipping Firestore save. Firebase is not active or configured.");
             }
+            // ----------------------------
+
+            // Hide the form and show the success message (ALWAYS happens now)
+            document.getElementById('booking-form-container').classList.add('hidden');
+            document.getElementById('booking-success').classList.remove('hidden');
+
+            // Open the WhatsApp URL in a new tab (ALWAYS happens now)
+            window.open(whatsappUrl, '_blank');
         });
 
         // The initial page render logic is now inside window.onload for reliability
@@ -296,34 +297,46 @@
             renderEventCards();
         };
 
-        // Initialize Firebase and Auth
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        setLogLevel('debug');
+        // --- Conditional Firebase Initialization ---
+        // Check if the firebaseConfig has any project-specific keys, indicating a valid config.
+        const hasValidConfig = Object.keys(firebaseConfig).length > 0 && (firebaseConfig.apiKey || firebaseConfig.projectId);
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                isAuthReady = true;
-                console.log("Authenticated with user ID:", userId);
-            } else {
-                try {
-                    if (initialAuthToken) {
-                        const tokenUser = await signInWithCustomToken(auth, initialAuthToken);
-                        userId = tokenUser.user.uid;
-                        console.log("Signed in with custom token. User ID:", userId);
+        if (hasValidConfig) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('debug');
+                isFirebaseActive = true; // Set flag to true
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        console.log("Authenticated with user ID:", userId);
                     } else {
-                        const anonymousUser = await signInAnonymously(auth);
-                        userId = anonymousUser.user.uid;
-                        console.log("Signed in anonymously. User ID:", userId);
+                        try {
+                            if (initialAuthToken) {
+                                const tokenUser = await signInWithCustomToken(auth, initialAuthToken);
+                                userId = tokenUser.user.uid;
+                            } else {
+                                const anonymousUser = await signInAnonymously(auth);
+                                userId = anonymousUser.user.uid;
+                            }
+                            isAuthReady = true;
+                            console.log("Firebase Auth Ready. User ID:", userId);
+                        } catch (error) {
+                            console.error("Firebase Auth failed:", error);
+                        }
                     }
-                    isAuthReady = true;
-                } catch (error) {
-                    console.error("Failed to sign in:", error);
-                }
+                });
+            } catch (e) {
+                console.error("Firebase initialization failed due to invalid credentials. Database features disabled.", e);
+                isFirebaseActive = false;
             }
-        });
+        } else {
+            console.warn("Firebase configuration is missing or invalid. Running in WhatsApp-only mode. Database saving is disabled.");
+        }
     </script>
 </body>
 </html>
