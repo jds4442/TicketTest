@@ -161,19 +161,24 @@
 
     </div>
 
-    <script type="module">
-        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- START: Firebase V8 CDN for robust global hosting compatibility (GitHub Pages fix) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- END: Firebase V8 CDN -->
 
-        // Firebase configuration
+    <script>
+        // NOTE: This entire script block is now a standard script block (no 'type="module"') 
+        // to ensure maximum compatibility on static hosting environments like GitHub Pages.
+
+        // Firebase configuration (using classic V8/V9 compatible configuration style)
+        // We still use the fallback logic in case the file is run in the Canvas environment.
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        let db, auth, userId;
+        let db; // Firestore instance (V8/V9 global style)
         let isAuthReady = false;
-        let isFirebaseActive = false; // New flag to track if initialization succeeded
+        let isFirebaseActive = false;
 
         const events = [
             {
@@ -205,7 +210,6 @@
         function renderEventCards() {
             const grid = document.getElementById('featured-events-grid');
             grid.innerHTML = '';
-            console.log(`Rendering ${events.length} featured events.`);
             events.forEach(event => {
                 const card = document.createElement('div');
                 card.className = 'bg-[#2c2c2c] text-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 cursor-pointer';
@@ -252,7 +256,7 @@
         }
 
         document.getElementById('booking-form').addEventListener('submit', async function(event) {
-            event.preventDefault(); // Prevent the default form submission
+            event.preventDefault();
 
             const firstName = document.getElementById('firstName').value;
             const lastName = document.getElementById('lastName').value;
@@ -264,16 +268,16 @@
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
-            // --- Firebase Save Logic ---
-            // Only attempt to save to Firestore if the Firebase services were successfully initialized.
+            // --- Firebase Save Logic (using V8 global syntax) ---
             if (isFirebaseActive && isAuthReady && db) {
                 try {
-                    await addDoc(collection(db, `/artifacts/${appId}/public/data/bookings`), {
+                    // V8 Syntax: db.collection().add({})
+                    await db.collection(`/artifacts/${appId}/public/data/bookings`).add({
                         firstName,
                         lastName,
                         email,
                         event: 'Halloween Party',
-                        timestamp: new Date()
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp() // V8 Timestamp field
                     });
                     console.log("Booking successfully saved to Firestore.");
                 } catch (e) {
@@ -282,62 +286,55 @@
             } else {
                 console.warn("Skipping Firestore save. Firebase is not active or configured.");
             }
-            // ----------------------------
+            // ------------------------------------------------------
 
-            // Hide the form and show the success message (ALWAYS happens now)
+            // Hide the form and show the success message (always runs for user experience)
             document.getElementById('booking-form-container').classList.add('hidden');
             document.getElementById('booking-success').classList.remove('hidden');
 
-            // Open the WhatsApp URL in a new tab (ALWAYS happens now)
+            // Open the WhatsApp URL in a new tab (always runs)
             window.open(whatsappUrl, '_blank');
         });
 
-        // The initial page render logic is now inside window.onload for reliability
         window.onload = function() {
             renderEventCards();
         };
 
-        // --- Conditional Firebase Initialization ---
-        // Check if the firebaseConfig has any project-specific keys, indicating a valid config.
+        // --- Firebase Initialization (Using V8 Globals) ---
+        // Check if the firebaseConfig has any project-specific keys.
         const hasValidConfig = Object.keys(firebaseConfig).length > 0 && (firebaseConfig.apiKey || firebaseConfig.projectId);
 
-        if (hasValidConfig) {
+        if (hasValidConfig && typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
             try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                setLogLevel('debug');
-                isFirebaseActive = true; // Set flag to true
-
-                onAuthStateChanged(auth, async (user) => {
+                // Initialize using V8 global object
+                const app = firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore(app);
+                
+                // Set up V8 Auth Listener
+                firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
-                        userId = user.uid;
                         isAuthReady = true;
-                        console.log("Authenticated with user ID:", userId);
+                        console.log("Authenticated with user ID:", user.uid);
                     } else {
+                        // Sign in anonymously if no user is present (V8 style)
                         try {
-                            if (initialAuthToken) {
-                                const tokenUser = await signInWithCustomToken(auth, initialAuthToken);
-                                userId = tokenUser.user.uid;
-                            } else {
-                                const anonymousUser = await signInAnonymously(auth);
-                                userId = anonymousUser.user.uid;
-                            }
-                            isAuthReady = true;
-                            console.log("Firebase Auth Ready. User ID:", userId);
+                             await firebase.auth().signInAnonymously();
+                             isAuthReady = true;
+                             console.log("Signed in anonymously.");
                         } catch (error) {
                             console.error("Firebase Auth failed:", error);
                         }
                     }
                 });
+                isFirebaseActive = true;
+                
             } catch (e) {
                 console.error("Firebase initialization failed due to invalid credentials. Database features disabled.", e);
                 isFirebaseActive = false;
             }
         } else {
-            console.warn("Firebase configuration is missing or invalid. Running in WhatsApp-only mode. Database saving is disabled.");
+            console.warn("Firebase global functions not detected or config invalid. Running in local/WhatsApp-only mode.");
         }
     </script>
 </body>
 </html>
-
