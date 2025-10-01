@@ -18,6 +18,11 @@
         h1, h2 {
             font-family: 'Nosifier', sans-serif;
         }
+        /* Custom Halloween Glow for the Event Card */
+        .halloween-glow {
+            box-shadow: 0 0 15px rgba(255, 102, 0, 0.7), 0 0 35px rgba(94, 25, 128, 0.4);
+            border: 1px solid rgba(255, 102, 0, 0.3);
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -30,7 +35,7 @@
             <div class="container mx-auto px-4 py-4 flex justify-end items-center">
                 <nav class="hidden md:flex items-center space-x-6">
                     <a href="#" class="text-gray-300 hover:text-white transition-colors" onclick="showPage('home')">Home</a>
-                    <a href="#" class="text-gray-300 hover:text-white transition-colors">Events</a>
+                    <!-- Removed the Events button -->
                     <a href="#" class="text-gray-300 hover:text-white transition-colors" onclick="showPage('contact')">Contact</a>
                 </nav>
                 <div class="flex items-center space-x-4">
@@ -48,7 +53,8 @@
                 <div class="bg-[#2c2c2c] rounded-3xl p-6 md:p-12 mb-12 shadow-xl">
                     <div class="text-center">
                         <h1 class="text-4xl md:text-5xl font-extrabold text-[#ff6600] mb-4">SOLÈ</h1>
-                        <p class="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">Discover concerts, sports, theater, and more. Your ticket to unforgettable experiences is just a click away.</p>
+                        <!-- UPDATED: Tagline changed -->
+                        <p class="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">From the sun into the solé</p>
                         
                     </div>
                 </div>
@@ -67,7 +73,8 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left mr-1"><path d="m15 18-6-6 6-6"/></svg>
                     Back to all events
                 </button>
-                <div class="bg-[#2c2c2c] rounded-3xl p-6 md:p-12 shadow-xl">
+                <!-- UPDATED: Background is black and custom Halloween glow class added -->
+                <div class="bg-black rounded-3xl p-6 md:p-12 shadow-xl halloween-glow">
                     <div class="flex flex-col lg:flex-row lg:space-x-8">
                         <div class="lg:w-2/3 mb-6 lg:mb-0">
                             <img id="event-image" src="" alt="Event Image" class="w-full h-80 object-cover rounded-2xl mb-6 shadow-md">
@@ -85,7 +92,8 @@
                                 <div id="ticket-prices" class="space-y-4 mb-6">
                                     <!-- Ticket prices will be dynamically added here -->
                                 </div>
-                                <button class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-700 transition-colors text-lg" onclick="showPage('booking')">
+                                <!-- UPDATED: Button color changed from indigo to theme orange -->
+                                <button class="w-full bg-[#ff6600] text-black font-bold py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-colors text-lg" onclick="showPage('booking')">
                                     Buy Tickets
                                 </button>
                             </div>
@@ -155,7 +163,8 @@
         <!-- Footer -->
         <footer class="bg-[#1a1a1a] text-white py-8 mt-12">
             <div class="container mx-auto px-4 text-center">
-                <p>&copy; 2024 TicketSphere. All rights reserved.</p>
+                <!-- UPDATED: Copyright year changed to 2025 -->
+                <p>&copy; 2025 TicketSphere. All rights reserved.</p>
             </div>
         </footer>
 
@@ -185,8 +194,10 @@
                 id: '1',
                 title: 'Halloween Party',
                 date: 'October 18th',
-                location: '123 Graveyard Lane, Midnight City',
-                image: 'https://placehold.co/800x600/581c87/ffffff?text=Halloween+Party',
+                // UPDATED: Location changed to "To be specified"
+                location: 'To be specified', 
+                // Updated placeholder image colors for a spookier look
+                image: 'https://placehold.co/800x600/FF6600/1A1A1A?text=HAUNTED+NIGHT',
                 description: 'Join us for a night of spooky fun! Dress up in your scariest costume and enjoy music, haunted mazes, and ghoulishly good treats. Prizes will be awarded for the best costume!',
                 prices: [
                     { type: 'Standard', price: '1500 ksh' }
@@ -211,8 +222,11 @@
             const grid = document.getElementById('featured-events-grid');
             grid.innerHTML = '';
             events.forEach(event => {
+                // Determine if this is the Halloween card to apply glow
+                const glowClass = event.id === '1' ? 'halloween-glow bg-black' : 'bg-[#2c2c2c]';
                 const card = document.createElement('div');
-                card.className = 'bg-[#2c2c2c] text-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 cursor-pointer';
+                // Added glowClass to the card's classes
+                card.className = `${glowClass} text-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 cursor-pointer`;
                 card.onclick = () => window.showPage('event-details', event.id);
                 card.innerHTML = `
                     <img src="${event.image}" alt="${event.title}" class="w-full h-48 object-cover">
